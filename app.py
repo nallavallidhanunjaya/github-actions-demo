@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Welcome to GitHub Actions CI/CD"
+    return "Welcome to GitHub Actions CI/CD - updated version!"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
