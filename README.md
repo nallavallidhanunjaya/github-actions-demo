@@ -271,6 +271,7 @@ Possible enhancements:
 ## 📸 Application Output
 
 Below is the final deployed application running on AWS ECS after the CI/CD pipeline execution.
+
 ![DevOps CI/CD Deployment Dashboard](docs/application-output.png)
 
 # 👨‍💻 Author
