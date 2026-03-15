@@ -1,10 +1,14 @@
-from flask import Flask
+from flask import Flask, render_template
+import socket
+from datetime import datetime
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Welcome to GitHub Actions CI/CD - updated version!"
+    hostname = socket.gethostname()
+    time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return render_template("index.html", hostname=hostname, time=time)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
