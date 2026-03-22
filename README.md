@@ -1,284 +1,271 @@
-# 🚀 GitHub Actions CI/CD Pipeline with AWS ECR and ECS
-
-## 📌 Project Overview
-This project demonstrates a **complete CI/CD pipeline using GitHub Actions** to automatically build, push, and deploy a containerized Python web application to AWS.
-
-Whenever code is pushed to the repository, the pipeline performs the following tasks:
-
-1. Builds a Docker image for the application  
-2. Pushes the Docker image to **Amazon Elastic Container Registry (ECR)**  
-3. Deploys the latest container image to **Amazon Elastic Container Service (ECS)**  
-
-The deployed application displays a **simple DevOps dashboard** showing container information and deployment time.
+# 🚀 End-to-End DevOps Monitoring Project  
+### Flask + Prometheus + Grafana + ECS + GitHub Actions + Terraform
 
 ---
 
-# 🏗 Architecture
+# 📌 1. Project Overview
+
+This project demonstrates a **complete DevOps lifecycle**:
+
+- Build → Test → Package → Deploy → Monitor  
+- Fully automated using CI/CD  
+- Deployed on AWS ECS (Fargate)  
+- Includes real-time monitoring with Prometheus & Grafana  
+
+---
+
+# 🎯 2. Problem Statement
+
+Modern applications require:
+
+- Automated deployments  
+- Containerized environments  
+- Real-time monitoring  
+
+This project implements all of the above in a single pipeline.
+
+---
+
+# 🧱 3. Architecture
 
 ```
-Developer Push Code
+Developer Push (GitHub)
         │
         ▼
-GitHub Repository
+GitHub Actions (CI/CD)
         │
-        ▼
-GitHub Actions CI Pipeline
-        │
-        ├── Install Dependencies
-        ├── Run Code Checks
-        ├── Build Docker Image
-        ├── Push Image to Amazon ECR
-        └── Deploy Updated Container to ECS
+        ├── Build Docker Images
+        ├── Push to Amazon ECR
+        └── Deploy to ECS
                 │
                 ▼
-        Amazon ECS Service
+ECS Fargate (Single Task)
+   ├── Flask App (5000, 8000)
+   ├── Prometheus (9090)
+   └── Grafana (3000)
                 │
                 ▼
-      Running Containerized Application
+Browser → Grafana Dashboard
 ```
 
 ---
 
-# ⚙️ Technologies Used
+# ⚙️ 4. Tech Stack
 
-- Python (Flask)
-- Docker
-- GitHub Actions
-- AWS ECR (Container Registry)
-- AWS ECS Fargate (Container Hosting)
-- AWS IAM (Access Management)
+| Category | Tools |
+|--------|------|
+| Language | Python (Flask) |
+| Containerization | Docker |
+| CI/CD | GitHub Actions |
+| Infrastructure | Terraform |
+| Cloud | AWS (ECR, ECS, IAM) |
+| Monitoring | Prometheus |
+| Visualization | Grafana |
 
 ---
 
-# 📂 Project Structure
+# 📦 5. Components
 
+## 🔹 Flask Application
+- Displays hostname & timestamp
+- Exposes metrics at `/metrics`
+- Tracks request count
+
+Example metric:
 ```
-github-actions-demo
-│
-├── app.py
-├── requirements.txt
-├── Dockerfile
-├── .dockerignore
-│
-├── templates
-│   └── index.html
-│
-└── .github
-     └── workflows
-          └── ci.yml
+request_count_total
 ```
 
 ---
 
-# 🌐 Application
+## 🔹 Prometheus
+- Scrapes metrics from Flask app
+- Runs inside ECS container
 
-The application is a **Flask-based web dashboard** displaying:
+Config:
+```yaml
+global:
+  scrape_interval: 5s
 
-- Application name
-- Container hostname
-- Deployment timestamp
-
-Example output:
-
-```
-🚀 DevOps CI/CD Deployment
-
-Application: GitHub Actions Demo
-Container Hostname: ecs-task-xxxx
-Deployment Time: 2026-03-15 20:30:12
+scrape_configs:
+  - job_name: 'flask-app'
+    static_configs:
+      - targets: ['localhost:8000']
 ```
 
 ---
 
-# 🐳 Docker Setup
+## 🔹 Grafana
+- Connects to Prometheus
+- Displays real-time dashboards
 
-Dockerfile used to build the container image:
-
-```dockerfile
-FROM python:3.10-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY . .
-
-EXPOSE 5000
-
-CMD ["python","app.py"]
+Data source:
+```
+http://localhost:9090
 ```
 
 ---
 
-# 🔐 AWS IAM Setup
+# 🔄 6. CI/CD Pipeline
 
-An IAM user was created for GitHub Actions with permissions required to push images to ECR.
-
-Required permissions include:
-
-- `ecr:GetAuthorizationToken`
-- `ecr:BatchCheckLayerAvailability`
-- `ecr:CompleteLayerUpload`
-- `ecr:UploadLayerPart`
-- `ecr:PutImage`
-
-The IAM user's **Access Key** and **Secret Key** are stored securely in GitHub Secrets.
-
----
-
-# 🔑 GitHub Secrets
-
-The following secrets are configured in the repository:
-
-```
-AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY
-AWS_REGION
-ECR_REPOSITORY
-```
-
-These credentials allow GitHub Actions to authenticate with AWS.
-
----
-
-# 🔄 GitHub Actions Workflow
-
-Workflow location:
-
-```
-.github/workflows/ci.yml
-```
-
-The workflow performs the following steps:
-
-1. Checkout repository
-2. Configure AWS credentials
-3. Login to Amazon ECR
-4. Build Docker image
-5. Push image to ECR
-6. Deploy container to ECS
-
-Example workflow snippet:
+## Trigger
 
 ```yaml
-name: CI Pipeline with ECR
-
 on:
   push:
     branches:
-      - main
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build Docker Image
-        run: docker build -t github-actions-demo .
-
-      - name: Tag Docker Image
-        run: docker tag github-actions-demo:latest ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
-
-      - name: Push Docker Image
-        run: docker push ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
-
-      - name: Deploy to ECS
-        run: |
-          aws ecs update-service \
-            --cluster github-actions-cluster \
-            --service github-actions-service \
-            --force-new-deployment
+      - master
+  workflow_dispatch:
 ```
 
 ---
 
-# 🚀 Deployment Process
+## Pipeline Steps
 
-Every push to the **main branch** automatically triggers the pipeline:
+1. Checkout code  
+2. Configure AWS credentials  
+3. Login to ECR  
+4. Build Docker images:
+   - Flask App  
+   - Prometheus  
+5. Push images to ECR  
+6. Deploy to ECS  
+
+---
+
+# 🚀 7. Deployment (ECS)
+
+## Task Definition
+
+Contains 3 containers:
+
+| Container | Ports |
+|----------|------|
+| Flask App | 5000, 8000 |
+| Prometheus | 9090 |
+| Grafana | 3000 |
+
+---
+
+## Networking
+
+- Containers run in same ECS task  
+- Communicate via `localhost`  
+
+---
+
+## Access
+
+Grafana UI:
 
 ```
-Push Code
-   ↓
-GitHub Actions Pipeline
-   ↓
-Build Docker Image
-   ↓
-Push Image to ECR
-   ↓
-Update ECS Service
-   ↓
-Deploy Latest Container
-```
-
-The ECS service pulls the latest image from ECR and starts new containers.
-
----
-
-# 🧪 How to Access the Application
-
-After deployment:
-
-1. Open **AWS ECS Console**
-2. Navigate to the running task
-3. Copy the **Public IP Address**
-4. Open the browser:
-
-```
-http://PUBLIC-IP:5000
+http://<PUBLIC-IP>:3000
 ```
 
 ---
 
-# 📚 Key Concepts Demonstrated
+# 📊 8. Monitoring Flow
 
-This project demonstrates:
-
-- GitHub Actions CI/CD workflows
-- Docker image build automation
-- Secure AWS authentication using GitHub secrets
-- Container registry management with ECR
-- Automated deployments using ECS
-- DevOps CI/CD best practices
+```
+Flask App → Prometheus → Grafana → User
+```
 
 ---
 
-# 💡 Future Improvements
+## Prometheus Target
 
-Possible enhancements:
-
-- Docker image versioning using Git commit SHA
-- Multi-stage pipelines (build → deploy)
-- Automated testing
-- Monitoring and logging
-- Use GitHub OIDC authentication instead of IAM access keys
-
----
-## 📸 Application Output
-
-Below is the final deployed application running on AWS ECS after the CI/CD pipeline execution.
-
-![DevOps CI/CD Deployment Dashboard](docs/application-output.png)
-
-# 👨‍💻 Author
-
-Dhanunjaya Nallavalli  
-DevOps Engineer
+```
+http://localhost:8000/metrics
+```
 
 ---
 
-⭐ If you found this project useful, consider giving it a star!
+## Grafana Query
+
+```promql
+rate(request_count_total[1m])
+```
+
+---
+
+# 🖥️ 9. Outputs
+
+## Application UI
+![Application UI](docs/app_output.png)
+
+## Prometheus Targets
+![Prometheus Targets](docs/Prometheus_target.png)
+
+## Grafana Dashboard
+![Grafana Dashboard](docs/Grafana-output.png)
+
+---
+
+# 🔐 10. Security
+
+| Component | Access |
+|----------|--------|
+| Flask App | Private |
+| Prometheus | Private |
+| Grafana | Public |
+
+---
+
+# 🧠 11. Key Learnings
+
+- Docker multi-container setup  
+- Prometheus scraping  
+- Grafana dashboards  
+- ECS Fargate deployment  
+- Terraform infrastructure  
+- CI/CD automation  
+- Debugging real-world issues  
+
+---
+
+# ⚠️ 12. Challenges
+
+- Docker build context issues  
+- Windows path issues  
+- Container networking (localhost vs IP)  
+- Metrics visibility issues  
+- Grafana datasource debugging  
+
+---
+
+# 🚀 13. Future Enhancements
+
+- Add Application Load Balancer (ALB)  
+- Enable HTTPS using ACM  
+- Add CloudWatch logging  
+- Add alerts in Grafana  
+- Use versioned images instead of `latest`  
+
+---
+
+# 👨‍💻 14. Author
+
+Dhanunjaya Nallavalli 
+
+---
+
+# ⭐ 15. Quick Run (Local)
+
+```bash
+git clone <repo-url>
+cd project
+
+docker build -t flask-app .
+docker run -p 5000:5000 -p 8000:8000 flask-app
+```
+
+---
+
+# 🎉 16. Final Outcome
+
+- Automated CI/CD pipeline  
+- Multi-container ECS deployment  
+- Real-time monitoring dashboard  
+- Production-style DevOps architecture  
+
+---
