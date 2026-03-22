@@ -42,6 +42,12 @@ resource "aws_security_group" "ecs_security_group" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  ingress {
+    from_port = var.logging_port
+    to_port = var.logging_port
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 } 
 
 resource "aws_iam_role" "ecs_task_execution_role" {
