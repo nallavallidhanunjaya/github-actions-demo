@@ -32,7 +32,7 @@ jobs:
 
       - name: Build prometheus image
         run: |
-          docker build -t prometheus -f prometheus/Dockerfile .
+          docker build -t prometheus ./prometheus
 
       - name: Tag prometheus image
         run: |
